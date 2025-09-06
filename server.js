@@ -60,7 +60,7 @@ app.post('/create', async (req, res) => {
             });
             let token = jwt.sign({ email: email, userid: user._id }, 'shhhh');
             res.cookie('token', token);
-            return res.redirect('/login');
+            return res.redirect('/home');
         });
     });
 });
@@ -123,9 +123,15 @@ app.post('/update/:id', requiredAuth, async (req, res) => {
 
 app.delete('/delete/:id', requiredAuth, async (req, res) => {
     try {
-        await userSchema.findByIdAndDelete(req.params.id); 
-        res.status(200).json({ message: "User deleted successfully" });
-        res.redirect('/login')
+        await userSchema.findByIdAndDelete(req.params.id);
+        
+        res.clearCookie('token');
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: "User deleted successfully",
+            redirect: '/login' 
+        });
     } catch (err) {
         console.log(err);
         res.status(500).json({ error: "Something Went Wrong" });
