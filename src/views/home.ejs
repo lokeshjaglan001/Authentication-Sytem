@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="bg-gray-800 flex flex-col">
+    <navbar class="flex bg-gray-900 text-white h-15">
+        <div class="left flex ml-3 gap-2 ">
+            <img src="<%= user.profilepic && user.profilepic.data? `data:${user.profilepic.contentType};base64,${user.profilepic.data.toString('base64')}`: '/public/temp/default.webp' %>" alt="User Avatar" class="w-10 h-10 object-cover rounded-full my-auto"/>
+            <div class="my-auto font-bold"><%= user.username %></div>
+        </div>
+        <div class="right my-auto flex ml-auto mr-3 gap-3">
+            <a href="/edit/<%=user._id%>"><img src="../../public/edit.svg" alt="" class="h-5 w-5"></a>
+            <a href="/logout"><img src="../../public/logout.svg" alt="" class="h-5 w-5"></a>
+            <a href="#" onclick="deleteUser('<%= user._id %>')"><img src="../../public/delete.svg" alt="" class="h-5 w-5"></a>
+        </div>
+    </navbar>
+    <div class="input bg-gray-900 mx-auto w-100 my-10 rounded-3xl flex flex-col p-5 gap-2 text-white">
+        <label for="title">Title</label>
+        <input type="text" id="title" class="bg-gray-800 text-white border-2 border-solid border-blue-700 rounded-xl h-10 outline-none focus:outline-none px-3 py-2">
+        <label for="content">Content</label>
+        <textarea type="textarea" id="content" name="content" class="bg-gray-800 text-white h-30 border-2 border-solid border-blue-700 rounded-xl outline-none focus:outline-none px-3 py-2 resize-none" style="scrollbar-width: none; -ms-overflow-style: none;"></textarea>
+        <input type="submit" class="text-white bg-green-500 w-24 mx-auto h-8 rounded-md" value="Post" >
+    </div>
+</body>
+<script>
+        async function deleteUser(id) {
+            if (!confirm("Are you sure you want to delete this user?")) return;
+
+            const response = await fetch(`/delete/${id}`, {
+                method: "DELETE"
+            });
+
+            if (response.ok) {
+                alert("User deleted successfully!");
+                window.location.href = "/login"; // Redirect after deletion
+            } else {
+                alert("Failed to delete user.");
+            }
+        }
+</script>
+</html>

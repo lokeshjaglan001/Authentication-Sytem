@@ -1,24 +1,26 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import userSchema from './models/user.js';
+import userSchema from './src/models/user.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
-import { requiredAuth } from './middlewares/requiredAuth.js';
-import { redirectIfLoggedIn } from './middlewares/redirectIfLoggedIn.js';
+import { requiredAuth } from './src/middlewares/requiredAuth.js';
+import { redirectIfLoggedIn } from './src/middlewares/redirectIfLoggedIn.js';
+import upload from './src/middlewares/multer.middleware.js'
+import fs from 'fs';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+app.set("views", path.join(__dirname,"src", "views"));
 
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 
 app.get('/',redirectIfLoggedIn, (req, res) => {
@@ -46,23 +48,41 @@ app.get('/home', requiredAuth, async (req, res) => {
 });
 
 
-app.post('/create', async (req, res) => {
-    let { username, email, password } = req.body;
-    let user = await userSchema.findOne({ email });
-    if (user) return res.redirect('/');
+app.post('/create', upload.single('profilepic'), async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
 
-    bcrypt.genSalt(10, (err, salt) => {
-        bcrypt.hash(password, salt, async (err, hash) => {
-            let user = await userSchema.create({
-                username,
-                email,
-                password: hash
-            });
-            let token = jwt.sign({ email: email, userid: user._id }, 'shhhh');
-            res.cookie('token', token);
-            return res.redirect('/home');
+        let profilepic = null;
+        if (req.file) {
+            profilepic = {
+                data: fs.readFileSync(req.file.path),
+                contentType: req.file.mimetype
+            };
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await userSchema.create({
+            username,
+            email,
+            password: hashedPassword,
+            profilepic
         });
-    });
+
+        const token = jwt.sign({ email: user.email, userid: user._id }, 'shhhh', {
+            expiresIn: '7d'
+        });
+
+        res.cookie('token', token, {
+            httpOnly: true, // secure option if needed
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        return res.redirect('/home');
+    } catch (err) {
+        console.log(err);
+        return res.redirect('/');
+    }
 });
 
 
@@ -105,17 +125,30 @@ app.get('/edit/:id', requiredAuth, async (req, res) => {
 });
 
 
-app.post('/update/:id', requiredAuth, async (req, res) => {
+app.post('/update/:id', requiredAuth, upload.single('profilepic'), async (req, res) => {
     try {
-        const { username, email, password } = req.body;
-        await userSchema.findByIdAndUpdate(req.params.id, {
-            username,
-            email
-        });
-        res.redirect('/home'); 
+        const { username, email } = req.body;
 
+        const user = await userSchema.findById(req.params.id);
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        user.username = username || user.username;
+        user.email = email || user.email;
+
+        if (req.file) {
+            user.profilepic = {
+                data: fs.readFileSync(req.file.path),
+                contentType: req.file.mimetype
+            };
+        }
+
+        await user.save();
+
+        res.redirect('/home');
     } catch (err) {
-        console.log(err);
+        console.error(err);
         res.status(500).send("Update failed");
     }
 });
@@ -137,6 +170,26 @@ app.delete('/delete/:id', requiredAuth, async (req, res) => {
         res.status(500).json({ error: "Something Went Wrong" });
     }
 });
+
+
+app.get('/user/:id/profilepic', async (req, res) => {
+  try {
+    const user = await userSchema.findById(req.params.id);
+    if (!user || !user.profilepic) {
+      return res.sendStatus(404);
+    }
+
+    res.set('Content-Type', user.profilepic.contentType); // e.g., 'image/png'
+    res.send(user.profilepic.data); // send the Buffer
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(500);
+  }
+});
+
+
+
+
 
 
 app.listen(3000, () => {
