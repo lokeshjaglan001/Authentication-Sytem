@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-800 flex flex-col items-center justify-center min-h-screen">
+    <form class="input bg-gray-900 mx-auto w-100 my-10 rounded-3xl flex flex-col p-5 gap-2 text-white" action="/updatePost/<%=post._id%>" method="post">
+        <label for="title">Title</label>
+        <input type="text" id="title" class="bg-gray-800 text-white border-2 border-solid border-blue-700 rounded-xl h-10 outline-none focus:outline-none px-3 py-2" name="title" value="<%= post.title%>">
+        <label for="content">Content</label>
+        <textarea type="textarea" id="content" name="content" class="bg-gray-800 text-white h-30 border-2 border-solid border-blue-700 rounded-xl outline-none focus:outline-none px-3 py-2 resize-none" style="scrollbar-width: none; -ms-overflow-style: none;" name="content" ><%= post.content%></textarea>
+        <input type="submit" class="text-white bg-green-500 w-24 mx-auto h-8 rounded-md" value="Post" >
+    </form>
+</body>
+</html>

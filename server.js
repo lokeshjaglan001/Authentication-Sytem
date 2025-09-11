@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import userSchema from './src/models/user.js';
+import postSchema from './src/models/post.js'
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
@@ -33,19 +34,30 @@ app.get('/login',redirectIfLoggedIn, (req, res) => {
 });
 
 
+app.get('/postedit' , requiredAuth , async (req , res)=>{
+    res.render('postedit')
+})
+
+
 app.get('/home', requiredAuth, async (req, res) => {
     try {
-        const user = await userSchema.findById(req.user.userid); 
+        const user = await userSchema.findById(req.user.userid);
+        const posts = await postSchema.find().populate("username"); 
         if (!user) {
             res.clearCookie('token'); 
             return res.redirect('/login');
         }
-        res.render('home', { user });
+        res.render('home', { user, posts });
     } catch (err) {
         console.log(err);
         res.redirect('/login');
     }
 });
+
+
+app.get('/postpage' , requiredAuth , async(req , res)=>{
+    res.render('post')
+})
 
 
 app.post('/create', upload.single('profilepic'), async (req, res) => {
@@ -84,6 +96,24 @@ app.post('/create', upload.single('profilepic'), async (req, res) => {
         return res.redirect('/');
     }
 });
+
+
+app.post('/post',requiredAuth, async(req , res)=>{
+    if (!req.user) {
+        return res.status(401).send('Unauthorized: User not authenticated');
+    }
+    let user = await userSchema.findOne({email : req.user.email})
+    const { title , content} = req.body
+    const post = await postSchema.create({
+        username: user._id,
+        title,
+        content,
+    })
+
+    user.posts.push(post._id)
+    await user.save()
+    res.redirect('/home')
+})
 
 
 app.post('/login', async (req, res) => {
@@ -186,6 +216,39 @@ app.get('/user/:id/profilepic', async (req, res) => {
     res.sendStatus(500);
   }
 });
+
+
+app.get('/like/:id', requiredAuth , async (req , res)=>{
+    let post = await postSchema.findOne({_id: req.params.id}).populate('username')
+    
+    if (post.likes.indexOf(req.user.userid) === -1){
+        post.likes.push(req.user.userid)
+    } else {
+        post.likes.splice(post.likes.indexOf(req.user.userid) , 1)
+    }
+
+    await post.save()
+    res.status(200).json({message:"Liked success"})
+})
+
+app.get('/editPost/:id' , async (req , res)=>{
+    try {
+        const post = await postSchema.findById({_id : req.params.id}).populate('username');
+        if (!post) {
+            return res.status(404).send("Post not found");
+        }
+        res.render("postedit", { post });
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("Server Error");
+    }
+})
+
+app.post('/updatePost/:id' , async (req , res)=>{
+    let post = await postSchema.findOneAndUpdate({_id: req.params.id} , {content: req.body.content , title : req.body.title} )
+    
+    res.redirect('/home')
+})
 
 
 

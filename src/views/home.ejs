@@ -14,18 +14,36 @@
             <img src="<%= user.profilepic && user.profilepic.data? `data:${user.profilepic.contentType};base64,${user.profilepic.data.toString('base64')}`: '/public/temp/default.webp' %>" alt="User Avatar" class="w-10 h-10 object-cover rounded-full my-auto"/>
             <div class="my-auto font-bold"><%= user.username %></div>
         </div>
-        <div class="right my-auto flex ml-auto mr-3 gap-3">
-            <a href="/edit/<%=user._id%>"><img src="../../public/edit.svg" alt="" class="h-5 w-5"></a>
-            <a href="/logout"><img src="../../public/logout.svg" alt="" class="h-5 w-5"></a>
-            <a href="#" onclick="deleteUser('<%= user._id %>')"><img src="../../public/delete.svg" alt="" class="h-5 w-5"></a>
+        <div class="right flex my-auto ml-auto mr-3 gap-3">
+            <a href="/edit/<%=user._id%>"><img src="../../public/edit.svg" alt="" class="h-5 w-5 mt-2"></a>
+            <a href="/logout"><img src="../../public/logout.svg" alt="" class="h-5 w-5 mt-2"></a>
+            <a href="#" onclick="deleteUser('<%= user._id %>')"><img src="../../public/delete.svg" alt="" class="h-5 w-5 mt-2"></a>
+            <a href="/postpage" class="text-white h-9 bg-green-500 rounded-md px-2 py-1">Create Post</a>
         </div>
     </navbar>
-    <div class="input bg-gray-900 mx-auto w-100 my-10 rounded-3xl flex flex-col p-5 gap-2 text-white">
-        <label for="title">Title</label>
-        <input type="text" id="title" class="bg-gray-800 text-white border-2 border-solid border-blue-700 rounded-xl h-10 outline-none focus:outline-none px-3 py-2">
-        <label for="content">Content</label>
-        <textarea type="textarea" id="content" name="content" class="bg-gray-800 text-white h-30 border-2 border-solid border-blue-700 rounded-xl outline-none focus:outline-none px-3 py-2 resize-none" style="scrollbar-width: none; -ms-overflow-style: none;"></textarea>
-        <input type="submit" class="text-white bg-green-500 w-24 mx-auto h-8 rounded-md" value="Post" >
+    <div class="posts mt-10 flex flex-wrap text-white ml-2">
+        <% posts.reverse().forEach(function(post){%>
+            <div class="post m-2 <%= post.username.username === user.username ? 'border-blue-500':'border-zinc-700' %> w-32/100 rounded-md bg-zinc-800 border-[1px] px-3 py-2">
+            <h1 class="text-blue-500">@<%= post.username.username%></h1>
+            <h1 class="text-xl"><%= post.title%></h1>
+            <p><%= post.content%></p>
+            <% if (post.likes && post.likes.length !== undefined) { %>
+            <small><%= post.likes.length %></small>
+            <% } else { %>
+            <small>0</small>
+            <% } %>
+            <div class="btns flex gap-4 ">
+                <button class="text-red-500" onclick="like('<%= post.id%>')" id="<%= post.id%>" href="#">
+                   <%= (post.likes || []).indexOf(user._id) !== -1 ? 'UnLike' : 'Like' %>
+                </button>
+                <% if (post.username.username === user.username) {%>
+                    <a href="/editPost/<%=post._id%>" class="text-zinc-600">Edit</a>
+                <% } else {%>
+                    
+                <% } %>
+            </div>
+        </div>
+        <%})%>
     </div>
 </body>
 <script>
@@ -42,6 +60,18 @@
             } else {
                 alert("Failed to delete user.");
             }
+        }
+
+        async function like(id) {
+            const btn = document.getElementById(id);
+            btn.innerText = "Waiting...";
+            btn.ariaDisabled = true;
+            const response = await fetch(`/like/${id}`);
+
+            if (response.ok) {
+                btn.innerText = "UnLike";
+            }
+            btn.ariaDisabled = false;
         }
 </script>
 </html>

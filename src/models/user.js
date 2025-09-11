@@ -28,7 +28,11 @@ const userSchema = new mongoose.Schema({
             required: false,
             default: null   // ✅ FIX: Safe default
         }
-   }
+   },
+   posts: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'post'
+   }]
 });
 
 export default mongoose.model('user', userSchema)
